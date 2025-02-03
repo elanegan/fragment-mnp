@@ -7,9 +7,12 @@ from importlib.metadata import version
 
 # Populate the package namespace
 from .fragmentmnp import FragmentMNP
+from .FragmentSolver import FragmentSolver
+#from .FragmentController import FragmentController
+#from .BmiFMNP import BmiFMNP
 
 # Get the version from the installed package metadata
 __version__ = version(__name__)
 
 # Let type checkers know what is part of the package
-__all__ = ['FragmentMNP']
+__all__ = ['FragmentMNP', 'FragmentSolver']
