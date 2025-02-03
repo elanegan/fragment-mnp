@@ -321,7 +321,6 @@ def surface_area(psd: npt.NDArray[np.float64]) -> \
 class FragmentSolver:
 
     def __init__(self, fsd_beta: float, n_size_classes: int, psd: npt.NDArray[np.float64], dt: float, solver_params: dict) -> None:
-        self._time = 0.0
         self._dt = dt
         self._n_size_classes = n_size_classes
         self._psd = psd
@@ -384,18 +383,3 @@ class FragmentSolver:
 #        output = FMNPOutput(soln.t, soln.y, n, c_diss_from_sc, c_diss,
 #                          n_diss_from_sc, soln, self._psd)
 #        return output
-
-    @property
-    def time(self) -> float:
-        return self._time
-
-    @property
-    def time_step(self) -> float:
-        return self._time_step
-
-    @time_step.setter
-    def set_time_step(self, time_step: float) -> None:
-        self._time_step = time_step
-
-    def advance_in_time(self) -> None:
-        self._time += self._time_step
