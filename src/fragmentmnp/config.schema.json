@@ -1,0 +1,71 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"title": "Config",
+	"description": "Configuration options for Fragment-MNP model.",
+	"type": "object",
+	"properties": {
+		"n_size_classes": {
+			"description": "Number of particle size classes to model",
+			"type": "integer",
+			"minimum": 1
+		},
+		"particle_size_classes": {
+			"description": "Particle size distribution",
+			"type": "array",
+			"items": {
+				"type": "number",
+				"exclusiveMinimum": 0
+			},
+			"minItems": 1
+		},
+		"dt": {
+			"description": "Size of time step",
+			"type": "number",
+			"exclusiveMinimum": 0
+		},
+		"solver_config": {
+			"description": "Configuration options for the numerical solver",
+			"type": "object",
+			"properties": {
+				"method": {
+					"description": "Name of the numerical solver to use",
+					"type": "string"
+				},
+				"rtol": {
+					"description": "Relative tolerance for solver",
+					"type": "number"
+				},
+				"atol": {
+					"description": "Absolute tolerance for solver",
+					"type": "number"
+				},
+				"max_step": {
+					"description": "Maximum allowed step size for solver",
+					"type": "number"
+				},
+				"t_eval": {
+					"description": "Times at which to store the computed solution",
+					"type": "array",
+					"items": {
+						"type": "number",
+						"minItems": 1
+					}
+				}
+			}
+		},
+		"input_location": {
+			"description": "Location to load the input data from",
+			"type": "string"
+		},
+		"output_location": {
+			"description": "Location to store solution data to",
+			"type": "string"
+		},
+		"id": {
+			"description": "Unique identifier for this model run",
+			"type": "integer"
+		}
+	},
+
+	"required": [ "n_size_classes", "particle_size_classes", "input_location", "output_location", "id" ]
+}
