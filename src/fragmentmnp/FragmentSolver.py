@@ -60,20 +60,11 @@ def make_fsd(n: int, psd: npt.NDArray[np.float64], beta: float) -> npt.NDArray[n
                            / np.sum(psd[:-(n-i)] ** beta))
     return fsd
 
-def make_differential(n_size_classes: int, t_grid: np.ndarray, ik_frag: np.ndarray, ik_diss: np.ndarray, fsd: npt.NDArray[np.float64]) -> Callable[[int, dict], np.ndarray]:
+def make_differential(n_size_classes: int, f_frag: interpolate.interp1d, f_diss: interpolate.interp1d, fsd: npt.NDArray[np.float64]) -> Callable[[int, dict], np.ndarray]:
     def f(t, c):
-        k_frag = ik_frag
-        k_diss = ik_diss
-
         # Get the number of size classes and create results to be filled
         N = n_size_classes
         dcdt = np.empty(N)
-        # Interpolate the time-dependent parameters to the specific
-        # timestep given (which will be a float, rather than integer index)
-        f_frag = interpolate.interp1d(t_grid, k_frag, axis=1,
-                                      fill_value='extrapolate')
-        f_diss = interpolate.interp1d(t_grid, k_diss, axis=1,
-                                      fill_value='extrapolate')
         k_frag = f_frag(t)
         k_diss = f_diss(t)
         # Loop over the size classes and perform the calculation
@@ -346,8 +337,14 @@ class FragmentSolver:
         k_frag[0, :] = 0.0
         k_diss = make_2D_distribution(data['k_diss'], self._surface_areas, t_grid)
 
+        # Interpolate the time-dependent parameters to the specific
+        # timestep given (which will be a float, rather than integer index)
+        f_frag = interpolate.interp1d(t_grid, k_frag, axis=1,
+                                      fill_value='extrapolate')
+        f_diss = interpolate.interp1d(t_grid, k_diss, axis=1,
+                                      fill_value='extrapolate')
+        f = make_differential(n_size_classes=self._n_size_classes, f_frag=f_frag, f_diss=f_diss, fsd=self._fsd)
         # Numerically solve this given the initial values for c
-        f = make_differential(n_size_classes=self._n_size_classes, t_grid=t_grid, ik_frag=k_frag, ik_diss=k_diss, fsd=self._fsd)
         soln = solve_ivp(fun=f,
                          method=self._solver_params['method'],
                          t_span=(t_grid.min(), t_grid.max()),
@@ -360,22 +357,19 @@ class FragmentSolver:
         if not soln.success:
             raise FMNPNumericalError('Model solution could not be ' +
                                      f'found: {soln.message}')
-        return soln
-#        # Calculate the timeseries of mass concentration lost to dissolution
-#        # from the solution, first interpolating k_diss to the t values
-#        # we evaluated the solution over (t_eval)
-#        f_diss = interpolate.interp1d(t_grid, k_diss, axis=1,
-#                                      fill_value='extrapolate')
-#        k_diss_eval = f_diss(t_eval)
-#        j_diss = k_diss_eval * soln.y
-#        # Use this to calculate the cumulative mass concentration
-#        # lost to dissolution
-#        c_diss_from_sc = np.cumsum(j_diss, axis=1)
-#        # Add initial concentration and sum across size classes
-#        c_diss = np.sum(np.cumsum(j_diss, axis=1), axis=0) \
-#            + data["initial_concs_diss"]
-#        # Now we have the solutions as mass concentrations, we can
-#        # convert to particle number concentrations
+        # Calculate the timeseries of mass concentration lost to dissolution
+        # from the solution, first interpolating k_diss to the t values
+        # we evaluated the solution over (t_eval)
+        k_diss_eval = f_diss(t_eval)
+        j_diss = k_diss_eval * soln.y
+        # Use this to calculate the cumulative mass concentration
+        # lost to dissolution
+        c_diss_from_sc = np.cumsum(j_diss, axis=1)
+        # Add initial concentration and sum across size classes
+        # c_diss = np.sum(c_diss_from_sc, axis=0) \
+        #    + data["initial_concs_diss"]
+        # Now we have the solutions as mass concentrations, we can
+        # convert to particle number concentrations
 #        n = self.mass_to_particle_number(soln.y)
 #        n_diss_from_sc = self.mass_to_particle_number(c_diss)
 #
@@ -383,3 +377,4 @@ class FragmentSolver:
 #        output = FMNPOutput(soln.t, soln.y, n, c_diss_from_sc, c_diss,
 #                          n_diss_from_sc, soln, self._psd)
 #        return output
+        return soln.t, soln.y, c_diss_from_sc
