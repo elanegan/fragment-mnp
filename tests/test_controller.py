@@ -53,11 +53,12 @@ save_on_solve = False
 id = 1
 
 with open(data_input_location, "r") as infile, open(data_output_location, "r+") as outfile:
-    controller = FragmentController(fsd_beta, n_size_classes, psd, dt, solver_params, save_on_solve, infile, outfile, id)
+    controller = FragmentController(fsd_beta, n_size_classes, psd, dt, solver_params, save_on_solve, id)
+    controller.set_io_input_data(infile)
+    controller.set_io_output_data(outfile)
 
     controller.step(n_timesteps)
     controller.finalize()
-
 
 with open(data_output_location, "r") as outdatafile:
     outdata = outdatafile.read()

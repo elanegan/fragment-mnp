@@ -30,13 +30,11 @@ class FragmentController:
             raise SchemaError('Model config did not pass validation!') from err
         return config
 
-    def __init__(self, fsd_beta: float, n_size_classes: int, psd: npt.NDArray[np.float64], dt: float, solver_params: dict, save_on_solve: bool, io_input_data: io.TextIOBase, io_output_data: io.TextIOBase, id: int):
+    def __init__(self, fsd_beta: float, n_size_classes: int, psd: npt.NDArray[np.float64], dt: float, solver_params: dict, save_on_solve: bool, id: int):
         self._solver = FragmentSolver(fsd_beta, n_size_classes, psd, dt, solver_params)
         self._id = id
         self._time = 0.0
         self._save_on_solve = save_on_solve
-        self._io_input_data = io_input_data
-        self._io_output_data = io_output_data
         self._soln_t = []
         self._soln_y = []
         self._c_diss_from_sc = []
@@ -46,7 +44,7 @@ class FragmentController:
         # config = validation.validate_config(schema_validated)
         return cls(**schema_validated)
 
-#    def from_file_like(cls: type[FragmentController], file_like: TextIOBase) -> FragmentController:
+#    def from_file_like(cls: type[FragmentController], file_like: io.TextIOBase) -> FragmentController:
 #        # do some basic manipulations on config to fit to a more clean interface
 #        config = validation.validate_config(yaml.safe_load(file_like))
 #
@@ -107,3 +105,9 @@ class FragmentController:
 
     def advance_in_time(self) -> None:
         self._time += self._time_step
+
+    def set_io_input_data(self, io_input_data: io.TextIOBase) -> None:
+        self._io_input_data = io_input_data
+
+    def set_io_output_data(self, io_output_data: io.TextIOBase) -> None:
+        self._io_output_data = io_output_data
