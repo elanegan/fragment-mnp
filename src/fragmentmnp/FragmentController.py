@@ -17,6 +17,7 @@ from ._errors import FMNPNumericalError, FMNPDistributionValueError
 import json
 import fastjsonschema as fjs
 from . import jsonvalidator
+import io
 
 # Mostly just a class to handle IO for the solver.
 # Saves results, loads config
@@ -29,21 +30,19 @@ class FragmentController:
             raise SchemaError('Model config did not pass validation!') from err
         return config
 
-    def __init__(self, fsd_beta: float, n_size_classes: int, psd: npt.NDArray[np.float64], dt: float, solver_params: dict, save_on_solve: bool, input_data_location: str, output_data_location: str, id: int):
+    def __init__(self, fsd_beta: float, n_size_classes: int, psd: npt.NDArray[np.float64], dt: float, solver_params: dict, save_on_solve: bool, io_input_data: io.TextIOBase, io_output_data: io.TextIOBase, id: int):
         self._solver = FragmentSolver(fsd_beta, n_size_classes, psd, dt, solver_params)
         self._id = id
         self._time = 0.0
         self._save_on_solve = save_on_solve
-        self._input_data_location = input_data_location
-        self._output_data_location = output_data_location
+        self._io_input_data = io_input_data
+        self._io_output_data = io_output_data
         self._soln_t = []
         self._soln_y = []
         self._c_diss_from_sc = []
 
-    def from_json(cls, file_path):
-        with open(file_path, "r") as jsonfile:
-            unvalidated = json.load(jsonfile)
-        schema_validated = validate(unvalidated)
+    def from_json(cls, json_str):
+        schema_validated = validate(json_str)
         # config = validation.validate_config(schema_validated)
         return cls(**schema_validated)
 
@@ -66,11 +65,10 @@ class FragmentController:
 #                             'neither were found.')
 #        return cls(**config)
 
-    def step(self, n_timesteps: int = 1) -> npt.NDArray[np.float64]:
+    def step(self, n_timesteps: int = 1) -> None:
         # data locations from config file
         # get data from file
-        with open(self._input_data_location, "r") as infile:
-            indata = json.load(infile)
+        indata = json.load(self._io_input_data)
         # solve on data
         soln_t, soln_y, c_diss_from_sc = self._solver.solve(indata, n_timesteps)
         # store results
@@ -81,7 +79,6 @@ class FragmentController:
             # convert solution to text format, for portability
             # save output at save location
             self.save()
-        return soln_t, soln_y, c_diss_from_sc
 
     def output_to_json(self, soln_t, soln_y, c_diss_from_sc):
         jsonstr = json.dumps({"soln_t": soln_t, "soln_y": soln_y, "c_diss_from_sc": c_diss_from_sc})
@@ -89,8 +86,7 @@ class FragmentController:
 
     def save(self) -> None:
         outjson = self.output_to_json(self._soln_t, self._soln_y, self._c_diss_from_sc)
-        with open(self._output_data_location, "w") as outfile:
-            outfile.write(outjson)
+        self._io_output_data.write(outjson)
 
     def finalize(self) -> None:
         # convert solution to text format, for portability
